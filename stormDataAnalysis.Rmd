@@ -1,0 +1,38 @@
+# Reproducible Research: Peer Assessment 2
+
+```{r, echo=FALSE, results='hide', warning=FALSE, message=FALSE}
+setwd("~/Documents/coursera/repdata/coursera-reproducible-research-peer-assessment2")
+library(RCurl) # for loading external dataset
+library(R.utils) # for bunzip2
+library(ggplot2)
+library(scales)
+library(Hmisc)
+```
+
+```{r, echo=FALSE, results='hide', warning=FALSE, message=FALSE}
+# create a data dir if it doesn't exist
+if(!file.exists("./data")){
+    dir.create("./data")
+}
+# load file from URL to bz2 file in data dir
+if(!file.exists("./data/StormData.csv.bz2")){
+  fileUrl <- "https://d396qusza40orc.cloudfront.net/repdata/data/StormData.csv.bz2"
+  destPath <- "./data/StormData.csv.bz2"
+  binData <- getBinaryURL(fileUrl, ssl.verifypeer=0L, followlocation=1L)
+  destFileHandle <- file(destPath, open="wb")
+  writeBin(binData,destFileHandle)
+  close(destFileHandle)
+}
+# unzip bz2 file to csv
+if(!file.exists("./data/StormData.csv")){
+  filePath <- "./data/StormData.csv.bz2"
+  destPath <- "./data/StormData.csv"
+  bunzip2(filePath,destPath,overwrite=TRUE, remove=FALSE)
+}
+```
+
+## Loading and preprocessing the data
+##### 1. Load the data (i.e. read.csv())
+```{r}
+csvStormData <- read.csv("./data/StormData.csv")
+```

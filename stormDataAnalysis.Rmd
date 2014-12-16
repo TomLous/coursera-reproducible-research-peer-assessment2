@@ -1,15 +1,32 @@
+---
+output: html_document
+---
 # Reproducible Research: Peer Assessment 2
 
-```{r, echo=FALSE, results='hide', warning=FALSE, message=FALSE}
+## Assignment
+
+The basic goal of this assignment is to explore the NOAA Storm Database and answer some basic questions about severe weather events. You must use the database to answer the questions below and show the code for your entire analysis. Your analysis can consist of tables, figures, or other summaries. You may use any R package you want to support your analysis.
+
+## Synopsis
+
+...
+
+
+## Data Processing
+##### 1. Load libraries
+```{r, warning=FALSE, message=FALSE}
 setwd("~/Documents/coursera/repdata/coursera-reproducible-research-peer-assessment2")
-library(RCurl) # for loading external dataset
+library(RCurl) # for loading external dataset (getBinaryURL)
 library(R.utils) # for bunzip2
 library(ggplot2)
 library(scales)
 library(Hmisc)
+library(plyr) # for count method
 ```
 
-```{r, echo=FALSE, results='hide', warning=FALSE, message=FALSE}
+
+##### 2. Load source file and extract it
+```{r, warning=FALSE, message=FALSE}
 # create a data dir if it doesn't exist
 if(!file.exists("./data")){
     dir.create("./data")
@@ -31,8 +48,64 @@ if(!file.exists("./data/StormData.csv")){
 }
 ```
 
-## Loading and preprocessing the data
-##### 1. Load the data (i.e. read.csv())
-```{r}
+
+##### 3. Load the data
+```{r, cache = TRUE}
 csvStormData <- read.csv("./data/StormData.csv")
 ```
+
+##### 4. Remove unwanted colums (not used for this analysis)
+```{r, cache = TRUE}
+neededColumns <- c("BGN_DATE", "EVTYPE", "FATALITIES", "INJURIES", "PROPDMG", "PROPDMGEXP", "CROPDMG", "CROPDMGEXP")
+reducedStormData <- csvStormData[, neededColumns]
+```
+
+##### 5. Determine the offset year to use 
+Since the later years account for more observations, results could be skewed by the first years.
+By still using the majority of the observations, the cutoff point is arbritrarely set at 75%
+```{r, cache = TRUE}
+# get some counts
+totalNumberOfObservations <- nrow(reducedStormData)
+cutOffPercentage = 0.75
+cutOffObservations = round(totalNumberOfObservations * cutOffPercentage)
+
+# add columns for date calculations based on BGN_DATE
+reducedStormData$date = as.Date(reducedStormData$BGN_DATE, format = "%m/%d/%Y")
+reducedStormData$year = as.numeric(format(reducedStormData$date, "%Y"))
+
+# create dataset with count per year, reverse the recordset, create running total 
+yearRecords <- count(reducedStormData, "year")
+yearRecords <- yearRecords[order(yearRecords$year, decreasing=TRUE), ]
+yearRecords$runningTotal = cumsum(yearRecords$freq)
+cutOffYear <- min(yearRecords[yearRecords$runningTotal < cutOffObservations, 1])
+
+# reduce the dataset
+reducedStormData <- reducedStormData[reducedStormData$year >= cutOffYear, ]
+```
+
+##### 6. Refactor EVTYPE for statisticla purposes
+The EVTYPE contains ca. 985 unique source events. Many of them can be reduced to similar instances
+```{r, cache = TRUE}
+reducedStormData$type <- NA
+
+reducedStormData[grepl("precipitation|rain|hail|drizzle|wet|percip|burst|depression|fog|wall cloud", reducedStormData$EVTYPE, ignore.case = TRUE), "type"] <- "Precipitation & Fog"
+reducedStormData[grepl("wind|storm|wnd|hurricane|typhoon", reducedStormData$EVTYPE, ignore.case = TRUE), "type"] <- "Wind & Storm"
+reducedStormData[grepl("slide|erosion|slump", reducedStormData$EVTYPE, ignore.case = TRUE), "type"] <- "Landslide & Erosion"
+reducedStormData[grepl("warmth|warm|heat|dry|hot|drought|thermia|temperature record|record temperature|record high", reducedStormData$EVTYPE, ignore.case = TRUE), "type"] <- "Heat & Drought"
+reducedStormData[grepl("cold|cool|ice|icy|frost|freeze|snow|winter|wintry|wintery|blizzard|chill|freezing|avalanche|glaze|sleet", reducedStormData$EVTYPE, ignore.case = TRUE), "type"] <- "Snow & Ice"
+reducedStormData[grepl("flood|surf|blow-out|swells|fld|dam break", reducedStormData$EVTYPE, ignore.case = TRUE), "type"] <- "Flooding & High Surf"
+reducedStormData[grepl("seas|high water|high tide|tsunami|wave|current|marine|drowning", reducedStormData$EVTYPE, ignore.case = TRUE), "type"] <- "High seas"
+reducedStormData[grepl("dust|saharan", reducedStormData$EVTYPE, ignore.case = TRUE), "type"] <- "Dust & Saharan winds"
+reducedStormData[grepl("low tide", reducedStormData$EVTYPE, ignore.case = TRUE), "type"] <- "Low tide"
+reducedStormData[grepl("tstm|thunderstorm|lightning", reducedStormData$EVTYPE, ignore.case = TRUE), "type"] <- "Thunderstorm & Lightning"
+reducedStormData[grepl("tornado|spout|funnel|whirlwind", reducedStormData$EVTYPE, ignore.case = TRUE), "type"] <- "Tornado"
+reducedStormData[grepl("fire|smoke|volcanic", reducedStormData$EVTYPE, ignore.case = TRUE), "type"] <- "Fire & Volcanic activity"
+
+# remove uncategorized records (type == NA) & cast as factor
+reducedStormData <- reducedStormData[complete.cases(reducedStormData[, "type"]), ]
+reducedStormData$type <- as.factor(reducedStormData$type)
+```
+
+
+## Results
+

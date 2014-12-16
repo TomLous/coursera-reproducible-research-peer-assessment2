@@ -68,11 +68,12 @@ if (window.hljs && document.readyState && document.readyState === "complete") {
 <div id="load-libraries" class="section level5">
 <h5>1. Load libraries</h5>
 <pre class="r"><code>setwd(&quot;~/Documents/coursera/repdata/coursera-reproducible-research-peer-assessment2&quot;)
-library(RCurl) # for loading external dataset
+library(RCurl) # for loading external dataset (getBinaryURL)
 library(R.utils) # for bunzip2
 library(ggplot2)
 library(scales)
-library(Hmisc)</code></pre>
+library(Hmisc)
+library(plyr) # for count method</code></pre>
 </div>
 <div id="load-source-file-and-extract-it" class="section level5">
 <h5>2. Load source file and extract it</h5>
@@ -96,9 +97,57 @@ if(!file.exists(&quot;./data/StormData.csv&quot;)){
   bunzip2(filePath,destPath,overwrite=TRUE, remove=FALSE)
 }</code></pre>
 </div>
-<div id="load-the-data-i.e.read.csv" class="section level5">
-<h5>3. Load the data (i.e. read.csv())</h5>
+<div id="load-the-data" class="section level5">
+<h5>3. Load the data</h5>
 <pre class="r"><code>csvStormData &lt;- read.csv(&quot;./data/StormData.csv&quot;)</code></pre>
+</div>
+<div id="remove-unwanted-colums-not-used-for-this-analysis" class="section level5">
+<h5>4. Remove unwanted colums (not used for this analysis)</h5>
+<pre class="r"><code>neededColumns &lt;- c(&quot;BGN_DATE&quot;, &quot;EVTYPE&quot;, &quot;FATALITIES&quot;, &quot;INJURIES&quot;, &quot;PROPDMG&quot;, &quot;PROPDMGEXP&quot;, &quot;CROPDMG&quot;, &quot;CROPDMGEXP&quot;)
+reducedStormData &lt;- csvStormData[, neededColumns]</code></pre>
+</div>
+<div id="determine-the-offset-year-to-use" class="section level5">
+<h5>5. Determine the offset year to use</h5>
+<p>Since the later years account for more observations, results could be skewed by the first years. By still using the majority of the observations, the cutoff point is arbritrarely set at 75%</p>
+<pre class="r"><code># get some counts
+totalNumberOfObservations &lt;- nrow(reducedStormData)
+cutOffPercentage = 0.75
+cutOffObservations = round(totalNumberOfObservations * cutOffPercentage)
+
+# add columns for date calculations based on BGN_DATE
+reducedStormData$date = as.Date(reducedStormData$BGN_DATE, format = &quot;%m/%d/%Y&quot;)
+reducedStormData$year = as.numeric(format(reducedStormData$date, &quot;%Y&quot;))
+
+# create dataset with count per year, reverse the recordset, create running total 
+yearRecords &lt;- count(reducedStormData, &quot;year&quot;)
+yearRecords &lt;- yearRecords[order(yearRecords$year, decreasing=TRUE), ]
+yearRecords$runningTotal = cumsum(yearRecords$freq)
+cutOffYear &lt;- min(yearRecords[yearRecords$runningTotal &lt; cutOffObservations, 1])
+
+# reduce the dataset
+reducedStormData &lt;- reducedStormData[reducedStormData$year &gt;= cutOffYear, ]</code></pre>
+</div>
+<div id="refactor-evtype-for-statisticla-purposes" class="section level5">
+<h5>6. Refactor EVTYPE for statisticla purposes</h5>
+<p>The EVTYPE contains ca. 985 unique source events. Many of them can be reduced to similar instances</p>
+<pre class="r"><code>reducedStormData$type &lt;- NA
+
+reducedStormData[grepl(&quot;precipitation|rain|hail|drizzle|wet|percip|burst|depression|fog|wall cloud&quot;, reducedStormData$EVTYPE, ignore.case = TRUE), &quot;type&quot;] &lt;- &quot;Precipitation &amp; Fog&quot;
+reducedStormData[grepl(&quot;wind|storm|wnd|hurricane|typhoon&quot;, reducedStormData$EVTYPE, ignore.case = TRUE), &quot;type&quot;] &lt;- &quot;Wind &amp; Storm&quot;
+reducedStormData[grepl(&quot;slide|erosion|slump&quot;, reducedStormData$EVTYPE, ignore.case = TRUE), &quot;type&quot;] &lt;- &quot;Landslide &amp; Erosion&quot;
+reducedStormData[grepl(&quot;warmth|warm|heat|dry|hot|drought|thermia|temperature record|record temperature|record high&quot;, reducedStormData$EVTYPE, ignore.case = TRUE), &quot;type&quot;] &lt;- &quot;Heat &amp; Drought&quot;
+reducedStormData[grepl(&quot;cold|cool|ice|icy|frost|freeze|snow|winter|wintry|wintery|blizzard|chill|freezing|avalanche|glaze|sleet&quot;, reducedStormData$EVTYPE, ignore.case = TRUE), &quot;type&quot;] &lt;- &quot;Snow &amp; Ice&quot;
+reducedStormData[grepl(&quot;flood|surf|blow-out|swells|fld|dam break&quot;, reducedStormData$EVTYPE, ignore.case = TRUE), &quot;type&quot;] &lt;- &quot;Flooding &amp; High Surf&quot;
+reducedStormData[grepl(&quot;seas|high water|high tide|tsunami|wave|current|marine|drowning&quot;, reducedStormData$EVTYPE, ignore.case = TRUE), &quot;type&quot;] &lt;- &quot;High seas&quot;
+reducedStormData[grepl(&quot;dust|saharan&quot;, reducedStormData$EVTYPE, ignore.case = TRUE), &quot;type&quot;] &lt;- &quot;Dust &amp; Saharan winds&quot;
+reducedStormData[grepl(&quot;low tide&quot;, reducedStormData$EVTYPE, ignore.case = TRUE), &quot;type&quot;] &lt;- &quot;Low tide&quot;
+reducedStormData[grepl(&quot;tstm|thunderstorm|lightning&quot;, reducedStormData$EVTYPE, ignore.case = TRUE), &quot;type&quot;] &lt;- &quot;Thunderstorm &amp; Lightning&quot;
+reducedStormData[grepl(&quot;tornado|spout|funnel|whirlwind&quot;, reducedStormData$EVTYPE, ignore.case = TRUE), &quot;type&quot;] &lt;- &quot;Tornado&quot;
+reducedStormData[grepl(&quot;fire|smoke|volcanic&quot;, reducedStormData$EVTYPE, ignore.case = TRUE), &quot;type&quot;] &lt;- &quot;Fire &amp; Volcanic activity&quot;
+
+# remove uncategorized records (type == NA) &amp; cast as factor
+reducedStormData &lt;- reducedStormData[complete.cases(reducedStormData[, &quot;type&quot;]), ]
+reducedStormData$type &lt;- as.factor(reducedStormData$type)</code></pre>
 </div>
 </div>
 <div id="results" class="section level2">

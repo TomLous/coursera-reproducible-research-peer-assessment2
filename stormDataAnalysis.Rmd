@@ -1,5 +1,8 @@
 ---
-output: html_document
+output:
+  html_document:
+    keep_md: yes
+    toc: yes
 ---
 # Reproducible Research: Peer Assessment 2
 

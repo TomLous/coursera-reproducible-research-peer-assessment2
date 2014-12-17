@@ -9,3 +9,8 @@
 .Rproj.user
 data
 data/*
+#Knitr
+stormDataAnalysis_cache
+stormDataAnalysis_cache/*
+stormDataAnalysis_files
+stormDataAnalysis_files/*

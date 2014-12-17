@@ -21,6 +21,7 @@ library(R.utils) # for bunzip2
 library(scales) 
 library(Hmisc) 
 library(plyr) # for count & aggregate method
+library(reshape2) # for melt 
 
 library(ggplot2) # for plots
 library(grid) # for grids
@@ -217,6 +218,10 @@ if(dataProcess){
   rownames(aggregatedStormDataEconomicDamage) <- NULL
   aggregatedStormDataEconomicDamage$damageSource <- factor(aggregatedStormDataEconomicDamage$damageSource, levels=rev(aggregatedStormDataEconomicDamage$damageSource))
   
+  aggregatedMeltedStormDataEconomicDamage <- melt(aggregatedStormDataEconomicDamage, id.vars=c("damageSource"), measure.vars=c("propDamage","cropDamage"), variable.name="damageType", value.name="damage")
+  levels(aggregatedMeltedStormDataEconomicDamage$damageType)[levels(aggregatedMeltedStormDataEconomicDamage$damageType)=="propDamage"] <- "property"
+   levels(aggregatedMeltedStormDataEconomicDamage$damageType)[levels(aggregatedMeltedStormDataEconomicDamage$damageType)=="cropDamage"] <- "crops"
+  
   aggregatedStormDataHumanDamage <-aggregate(formula=cbind(injuries, fatalities) ~ damageSource, data=reducedStormData, FUN=sum, na.rm=TRUE) 
   aggregatedStormDataHumanDamage <- aggregatedStormDataHumanDamage[order(aggregatedStormDataHumanDamage$injuries, decreasing=TRUE),]
   rownames(aggregatedStormDataHumanDamage) <- NULL
@@ -237,6 +242,7 @@ if(dataProcess){
 if(dataProcess){
   save(reducedStormData, 
        aggregatedStormDataHumanDamage, 
+       aggregatedMeltedStormDataEconomicDamage,
        aggregatedStormDataEconomicDamage, 
        maxInjuries, 
        maxFatalities,
@@ -282,6 +288,7 @@ head(reducedStormData, n=10L)
 ##### 4.2. Injuries vs. Fatalities
 
 ```r
+# add middle column with just damageSource labels
 g.mid <- ggplot(data=aggregatedStormDataHumanDamage, aes(x=1,y=damageSource)) +
             geom_text(aes(label=damageSource), size=4) +
             ggtitle("") +
@@ -296,6 +303,7 @@ g.mid <- ggplot(data=aggregatedStormDataHumanDamage, aes(x=1,y=damageSource)) +
                   axis.ticks.x=element_line(color=NA),
                   plot.margin = unit(c(1,-1,1,-1), "mm"))
 
+# add left chart with injuries
 g.injuries <- ggplot(data=aggregatedStormDataHumanDamage, aes(x=damageSource, y=injuries)) +
             geom_bar(stat = "identity") + 
             geom_text(aes(label=injuries), size=3, vjust=0.5, hjust=2.0) +
@@ -308,6 +316,7 @@ g.injuries <- ggplot(data=aggregatedStormDataHumanDamage, aes(x=damageSource, y=
                   axis.ticks.y = element_blank(), 
                   plot.margin = unit(c(1,-1,1,0), "mm")) 
 
+# add right chart with fatalities
 g.fatalities <- ggplot(data=aggregatedStormDataHumanDamage, aes(x=damageSource, y=fatalities)) +
             geom_bar(stat = "identity") + 
             geom_text(aes(label=fatalities), size=3, vjust=0.5, hjust=-1.0) +
@@ -320,6 +329,7 @@ g.fatalities <- ggplot(data=aggregatedStormDataHumanDamage, aes(x=damageSource, 
                   axis.ticks.y = element_blank(), 
                   plot.margin = unit(c(1,0,1,-1), "mm")) 
 
+# combine charts in one plot
 gg.injuries <- ggplot_gtable(ggplot_build(g.injuries))
 gg.fatalities <- ggplot_gtable(ggplot_build(g.fatalities))
 gg.mid <- ggplot_gtable(ggplot_build(g.mid))
@@ -330,3 +340,13 @@ grid.arrange(gg.injuries,gg.mid,gg.fatalities,
 ```
 
 ![plot of chunk unnamed-chunk-12](./stormDataAnalysis_files/figure-html/unnamed-chunk-12.png) 
+
+##### 4.3. Economic Damage
+
+```r
+ggplot(aggregatedMeltedStormDataEconomicDamage, aes(x=damageSource, y=damage)) + 
+geom_bar(stat = "identity", aes(fill=damageType)) 
+```
+
+![plot of chunk unnamed-chunk-13](./stormDataAnalysis_files/figure-html/unnamed-chunk-13.png) 
+

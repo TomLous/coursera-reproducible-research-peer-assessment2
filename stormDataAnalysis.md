@@ -1,4 +1,8 @@
-# [Title]
+# Analysis of impact, both economic as humanitarian, of different weather events in the USA based on the NOAA Storm Database
+
+By Tom Lous (tomlous@gmail.com)
+Date: 18-12-2014
+
 ## Reproducible Research: Peer Assessment 2
 
 ### 1. Assignment
@@ -7,18 +11,21 @@ The basic goal of this assignment is to explore the NOAA Storm Database and answ
 
 ### 2. Synopsis
 
-[Synopsis]
+The National Oceanic and Atmospheric Administration (NOAA) maintains a public database for storm event. The data contains the type of storm event, details like location, date, estimates for damage to property as well as the number of human victims of the storm. In this report we investigate which type of events are the most harmful to the population and financially.
+
+[conclusion]
 
 ### 3. Data Processing
 
 
 ##### 3.1. Load libraries
+Necessary libraries to perform loading, computation, transformation and plotting of data
 
 ```r
 library(RCurl) # for loading external dataset (getBinaryURL)
 library(R.utils) # for bunzip2
 
-library(scales) 
+
 library(Hmisc) 
 library(plyr) # for count & aggregate method
 library(reshape2) # for melt 
@@ -26,10 +33,13 @@ library(reshape2) # for melt
 library(ggplot2) # for plots
 library(grid) # for grids
 library(gridExtra) # for advanced plots
+library(scales) # for plot scaling
 ```
 
 
 ##### 3.2. Load source file and extract it
+The results of the data proces are stored in a RData file. To skip ahead to plotting, the RData is loaded when available. Delete it to rerun processing.
+Else start loading the specified source files from URL and storing it locally
 
 ```r
 dataProcess <- TRUE
@@ -64,6 +74,7 @@ if(dataProcess){
 
 
 ##### 3.3. Load the data
+Read the source .csv file
 
 ```r
 if(dataProcess){
@@ -72,6 +83,7 @@ if(dataProcess){
 ```
 
 ##### 3.4. Remove unwanted colums (not used for this analysis)
+Just keep the columns: BGN_DATE, EVTYPE, FATALITIES, INJURIES, PROPDMG, PROPDMGEXP, CROPDMG, CROPDMGEXP needed for analysis
 
 ```r
 if(dataProcess){
@@ -83,7 +95,7 @@ if(dataProcess){
 
 ##### 3.5. Refactor BGN_DATE, determine the offset year to use, and reduce the dataset
 Since the later years account for more observations, results could be skewed by the first years.
-By still using the majority of the observations, the cutoff point is arbritrarely set at 75%
+By still using the majority of the observations, the cutoff point is arbritrarely set at 75% 
 
 ```r
 if(dataProcess){
@@ -111,8 +123,9 @@ if(dataProcess){
 }
 ```
 
-##### 3.6. Refactor EVTYPE into 12 levels
-The EVTYPE contains ca. 985 unique source events. Many of them can be reduced to similar instances. In this instance there are 12 levels defined.
+##### 3.6. Refactor EVTYPE into 11 levels
+The EVTYPE contains ca. 985 unique source events. Many of them can be reduced to similar instances. 
+In this instance there are 11 levels defined, covering effectifly the majority and all useful data records (summaries and combinations are skipped)
 
 ```r
 if(dataProcess){
@@ -130,12 +143,10 @@ if(dataProcess){
                          reducedStormData$EVTYPE, ignore.case = TRUE), "damageSource"] <- "Snow & Ice"
   reducedStormData[grepl("flood|surf|blow-out|swells|fld|dam break", 
                          reducedStormData$EVTYPE, ignore.case = TRUE), "damageSource"] <- "Flooding & High Surf"
-  reducedStormData[grepl("seas|high water|high tide|tsunami|wave|current|marine|drowning", 
+  reducedStormData[grepl("seas|high water|tide|tsunami|wave|current|marine|drowning", 
                          reducedStormData$EVTYPE, ignore.case = TRUE), "damageSource"] <- "High seas"
   reducedStormData[grepl("dust|saharan", 
-                         reducedStormData$EVTYPE, ignore.case = TRUE), "damageSource"] <- "Dust & Saharan winds"
-  reducedStormData[grepl("low tide", 
-                         reducedStormData$EVTYPE, ignore.case = TRUE), "damageSource"] <- "Low tide"
+                         reducedStormData$EVTYPE, ignore.case = TRUE), "damageSource"] <- "Dust & Saharan winds"  
   reducedStormData[grepl("tstm|thunderstorm|lightning", 
                          reducedStormData$EVTYPE, ignore.case = TRUE), "damageSource"] <- "Thunderstorm & Lightning"
   reducedStormData[grepl("tornado|spout|funnel|whirlwind", 
@@ -153,6 +164,7 @@ if(dataProcess){
 ```
 
 ##### 3.7. Refactor PROPDMG, CROPDMG, PROPDMGEXP & CROPDMGEXP to absolute damage values
+Format the DMG and DMGEXP fields in absolute values. Undefined EXP properties, like +, ?, make the record NA
 
 ```r
 if(dataProcess){
@@ -209,41 +221,46 @@ if(dataProcess){
 }
 ```
 
-##### 3.8. Create aggregated datasets
+##### 3.8. Create aggregated datasets and variables for plots
+The final data frames must be recast to be used in certain plot funtions
 
 ```r
 if(dataProcess){
-  aggregatedStormDataEconomicDamage <- aggregate(formula=cbind(propDamage, cropDamage, damageTotal) ~ damageSource, data=reducedStormData, FUN=sum, na.rm=TRUE)
-  aggregatedStormDataEconomicDamage <- aggregatedStormDataEconomicDamage[order(aggregatedStormDataEconomicDamage$damageTotal, decreasing=TRUE),]
-  rownames(aggregatedStormDataEconomicDamage) <- NULL
-  aggregatedStormDataEconomicDamage$damageSource <- factor(aggregatedStormDataEconomicDamage$damageSource, levels=rev(aggregatedStormDataEconomicDamage$damageSource))
+  # aggregate economic damage per damageSource
+  sumEconomicDamage <- aggregate(formula=cbind(propDamage, cropDamage, damageTotal) ~ damageSource, data=reducedStormData, FUN=sum, na.rm=TRUE)
+  sumEconomicDamage <- sumEconomicDamage[order(sumEconomicDamage$damageTotal, decreasing=TRUE),]
+  rownames(sumEconomicDamage) <- NULL
+  sumEconomicDamage$damageSource <- factor(sumEconomicDamage$damageSource, levels=rev(sumEconomicDamage$damageSource))
   
-  aggregatedMeltedStormDataEconomicDamage <- melt(aggregatedStormDataEconomicDamage, id.vars=c("damageSource"), measure.vars=c("propDamage","cropDamage"), variable.name="damageType", value.name="damage")
-  levels(aggregatedMeltedStormDataEconomicDamage$damageType)[levels(aggregatedMeltedStormDataEconomicDamage$damageType)=="propDamage"] <- "property"
-   levels(aggregatedMeltedStormDataEconomicDamage$damageType)[levels(aggregatedMeltedStormDataEconomicDamage$damageType)=="cropDamage"] <- "crops"
+  # melt the sumEconomicDamage into data frame to be used as bar chart
+  meltSumEconomicDamage <- melt(sumEconomicDamage, id.vars=c("damageSource"), measure.vars=c("propDamage","cropDamage"), variable.name="damageType", value.name="damage")
+  levels(meltSumEconomicDamage$damageType)[levels(meltSumEconomicDamage$damageType)=="propDamage"] <- "property"
+   levels(meltSumEconomicDamage$damageType)[levels(meltSumEconomicDamage$damageType)=="cropDamage"] <- "crops"
   
-  aggregatedStormDataHumanDamage <-aggregate(formula=cbind(injuries, fatalities) ~ damageSource, data=reducedStormData, FUN=sum, na.rm=TRUE) 
-  aggregatedStormDataHumanDamage <- aggregatedStormDataHumanDamage[order(aggregatedStormDataHumanDamage$injuries, decreasing=TRUE),]
-  rownames(aggregatedStormDataHumanDamage) <- NULL
-  aggregatedStormDataHumanDamage$damageSource <- factor(aggregatedStormDataHumanDamage$damageSource, levels=rev(aggregatedStormDataHumanDamage$damageSource))
+  # aggregate humanitarian damage per damageSource
+  sumHumanDamage <-aggregate(formula=cbind(injuries, fatalities) ~ damageSource, data=reducedStormData, FUN=sum, na.rm=TRUE) 
+  sumHumanDamage <- sumHumanDamage[order(sumHumanDamage$injuries, decreasing=TRUE),]
+  rownames(sumHumanDamage) <- NULL
+  sumHumanDamage$damageSource <- factor(sumHumanDamage$damageSource, levels=rev(sumHumanDamage$damageSource))
   
-  maxInjuries <- max(aggregatedStormDataHumanDamage$injuries)
+  # define max values for bar chart scale
+  maxInjuries <- max(sumHumanDamage$injuries)
   maxInjuries <- maxInjuries + round(maxInjuries * 0.25)
  
-  maxFatalities <- max(aggregatedStormDataHumanDamage$fatalities)
-  maxFatalities <- maxFatalities + round(maxFatalities * 0.25)
-  
+  maxFatalities <- max(sumHumanDamage$fatalities)
+  maxFatalities <- maxFatalities + round(maxFatalities * 0.25)  
 }
 ```
 
-##### 3.10. Save reducedStormData to RData file 
+##### 3.10. Save reducedStormData et al to RData file 
+Save the processed data to an RData file (see 3.2)
 
 ```r
 if(dataProcess){
   save(reducedStormData, 
-       aggregatedStormDataHumanDamage, 
-       aggregatedMeltedStormDataEconomicDamage,
-       aggregatedStormDataEconomicDamage, 
+       sumHumanDamage, 
+       meltSumEconomicDamage,
+       sumEconomicDamage, 
        maxInjuries, 
        maxFatalities,
        cutOffYear,
@@ -254,42 +271,55 @@ if(dataProcess){
 
 
 ### 4. Results
-##### 4.1. Show the first 10 lines of the new data set
+##### 4.1. Show the first & last 5 lines of the new data set
+Display a few records of the cleaned, reformatted stormData to be used for analysis
 
 ```r
-head(reducedStormData, n=10L)
+head(reducedStormData, n=5L)
 ```
 
 ```
-##    fatalities injuries year             damageSource propDamage cropDamage
-## 1           0        0 1996               Snow & Ice     380000      38000
-## 2           0        0 1996                  Tornado     100000          0
-## 3           0        0 1996 Thunderstorm & Lightning       3000          0
-## 4           0        0 1996 Thunderstorm & Lightning       5000          0
-## 5           0        0 1996 Thunderstorm & Lightning       2000          0
-## 6           0        0 1996      Precipitation & Fog          0          0
-## 7           0        0 1996             Wind & Storm     400000          0
-## 8           0        0 1996 Thunderstorm & Lightning      12000          0
-## 9           0        0 1996 Thunderstorm & Lightning       8000          0
-## 10          0        0 1996 Thunderstorm & Lightning      12000          0
-##    damageTotal
-## 1       418000
-## 2       100000
-## 3         3000
-## 4         5000
-## 5         2000
-## 6            0
-## 7       400000
-## 8        12000
-## 9         8000
-## 10       12000
+##   fatalities injuries year             damageSource propDamage cropDamage
+## 1          0        0 1996               Snow & Ice     380000      38000
+## 2          0        0 1996                  Tornado     100000          0
+## 3          0        0 1996 Thunderstorm & Lightning       3000          0
+## 4          0        0 1996 Thunderstorm & Lightning       5000          0
+## 5          0        0 1996 Thunderstorm & Lightning       2000          0
+##   damageTotal
+## 1      418000
+## 2      100000
+## 3        3000
+## 4        5000
+## 5        2000
+```
+
+```r
+tail(reducedStormData, n=5L)
+```
+
+```
+##        fatalities injuries year damageSource propDamage cropDamage
+## 653526          0        0 2011 Wind & Storm          0          0
+## 653527          0        0 2011 Wind & Storm          0          0
+## 653528          0        0 2011 Wind & Storm          0          0
+## 653529          0        0 2011   Snow & Ice          0          0
+## 653530          0        0 2011   Snow & Ice          0          0
+##        damageTotal
+## 653526           0
+## 653527           0
+## 653528           0
+## 653529           0
+## 653530           0
 ```
 
 ##### 4.2. Injuries vs. Fatalities
+Juxtaposed the injuries and fatalaties for each major weather event, orderd by number of injuries
+You can see that the top 5 for both contain the same events. But Heat & Drought has more casulties than Tornado's, by far the #1 in injuries.
+High seas have almost as much casulties as injuries, so it has the worst odds of survival of the list.
 
 ```r
 # add middle column with just damageSource labels
-g.mid <- ggplot(data=aggregatedStormDataHumanDamage, aes(x=1,y=damageSource)) +
+g.mid <- ggplot(data=sumHumanDamage, aes(x=1,y=damageSource)) +
             geom_text(aes(label=damageSource), size=4) +
             ggtitle("") +
             ylab(NULL) +
@@ -304,7 +334,7 @@ g.mid <- ggplot(data=aggregatedStormDataHumanDamage, aes(x=1,y=damageSource)) +
                   plot.margin = unit(c(1,-1,1,-1), "mm"))
 
 # add left chart with injuries
-g.injuries <- ggplot(data=aggregatedStormDataHumanDamage, aes(x=damageSource, y=injuries)) +
+g.injuries <- ggplot(data=sumHumanDamage, aes(x=damageSource, y=injuries)) +
             geom_bar(stat = "identity") + 
             geom_text(aes(label=injuries), size=3, vjust=0.5, hjust=2.0) +
             ggtitle("Injuries") +
@@ -317,7 +347,7 @@ g.injuries <- ggplot(data=aggregatedStormDataHumanDamage, aes(x=damageSource, y=
                   plot.margin = unit(c(1,-1,1,0), "mm")) 
 
 # add right chart with fatalities
-g.fatalities <- ggplot(data=aggregatedStormDataHumanDamage, aes(x=damageSource, y=fatalities)) +
+g.fatalities <- ggplot(data=sumHumanDamage, aes(x=damageSource, y=fatalities)) +
             geom_bar(stat = "identity") + 
             geom_text(aes(label=fatalities), size=3, vjust=0.5, hjust=-1.0) +
             ggtitle("Fatalities") +
@@ -341,12 +371,60 @@ grid.arrange(gg.injuries,gg.mid,gg.fatalities,
 
 ![plot of chunk unnamed-chunk-12](./stormDataAnalysis_files/figure-html/unnamed-chunk-12.png) 
 
-##### 4.3. Economic Damage
+The underlying data
 
 ```r
-ggplot(aggregatedMeltedStormDataEconomicDamage, aes(x=damageSource, y=damage)) + 
-geom_bar(stat = "identity", aes(fill=damageType)) 
+sumHumanDamage
 ```
 
-![plot of chunk unnamed-chunk-13](./stormDataAnalysis_files/figure-html/unnamed-chunk-13.png) 
+```
+##                damageSource injuries fatalities
+## 1                   Tornado    20670       1514
+## 2  Thunderstorm & Lightning     9305       1049
+## 3      Flooding & High Surf     8760       1483
+## 4            Heat & Drought     7644       2047
+## 5                Snow & Ice     3873       1150
+## 6              Wind & Storm     3190        556
+## 7       Precipitation & Fog     1812        170
+## 8  Fire & Volcanic activity     1458         87
+## 9                 High seas      763        618
+## 10     Dust & Saharan winds      415         13
+## 11      Landslide & Erosion       55         43
+```
 
+##### 4.3. Economic Damage
+Crop damage is hardly a factor in comparission to the total economic cost of certain weather events, except for Heat & Drought, where it effects more than 90%
+The real interesting ones are Wind & Storm and Flooding & High Surf covering together more than 80% of all economic damage over all the years.
+Tornado's,Thunderstorms and Snow & Ice, which have high impact in human costs, hardly matter in economic damages
+
+```r
+ggplot(meltSumEconomicDamage, aes(x=damageSource, y=damage/1000000)) + 
+  geom_bar(stat = "identity", aes(fill=damageType)) +
+  xlab("Event Type") +
+  theme(axis.text.x = element_text(angle = 45, size=8, hjust = 1, vjust = 1)) +
+  ylab("Total Damage (millions of USD)") +
+  ggtitle(paste("Aggregated property and crop damage for weather events from ",cutOffYear," to ",endYear, sep=""))
+```
+
+![plot of chunk unnamed-chunk-14](./stormDataAnalysis_files/figure-html/unnamed-chunk-14.png) 
+
+The underlying data
+
+```r
+sumEconomicDamage
+```
+
+```
+##                damageSource propDamage cropDamage damageTotal
+## 1      Flooding & High Surf  1.599e+11  6.350e+09   1.662e+11
+## 2              Wind & Storm  1.380e+11  6.727e+09   1.447e+11
+## 3                   Tornado  2.462e+10  2.834e+08   2.491e+10
+## 4       Precipitation & Fog  1.520e+10  3.225e+09   1.843e+10
+## 5            Heat & Drought  1.057e+09  1.386e+10   1.492e+10
+## 6  Thunderstorm & Lightning  8.663e+09  1.024e+09   9.686e+09
+## 7                Snow & Ice  6.468e+09  2.816e+09   9.284e+09
+## 8  Fire & Volcanic activity  7.761e+09  4.023e+08   8.163e+09
+## 9                 High seas  4.798e+09  4.102e+07   4.839e+09
+## 10      Landslide & Erosion  3.275e+08  2.002e+07   3.475e+08
+## 11     Dust & Saharan winds  6.158e+06  3.100e+06   9.258e+06
+```

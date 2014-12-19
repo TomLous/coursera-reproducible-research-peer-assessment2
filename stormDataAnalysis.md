@@ -1,7 +1,7 @@
-# Analysis of impact, both economic as humanitarian, of different weather events in the USA based on the NOAA Storm Database
+# Analysis of impact, both economic as victims, of different weather events in the USA based on the NOAA Storm Database
 
 By Tom Lous (tomlous@gmail.com)
-Date: 18-12-2014
+Date: 19-12-2014
 
 ## Reproducible Research: Peer Assessment 2
 
@@ -13,7 +13,9 @@ The basic goal of this assignment is to explore the NOAA Storm Database and answ
 
 The National Oceanic and Atmospheric Administration (NOAA) maintains a public database for storm event. The data contains the type of storm event, details like location, date, estimates for damage to property as well as the number of human victims of the storm. In this report we investigate which type of events are the most harmful to the population and financially.
 
-[conclusion]
+The conclusion is that the impact on humans, be it injuries or fatalities, isn't directly correlated to the ecomomic damage weather events cause. Tornado's are by far the highest cause for injuries (#1), and second in fatalities,  whilst heat & drought cause the most fatalities, but fourth in injuries. Both are in the top 5 of injuries & fatalities next to Thunderstorms (resp #2 and #5), Flooding (#3 both) and Snow & Ice (resp. #5 and #4).
+In economic damages, only the property damage really factors in the total damage, except for Heat & Drought where more than 90% of damages is determined by crop damage. The #1 & #2 of weather damage sources, resp. Flooding & High Surf and Wind & Storm cover more than 80% of all economic cost, while Wind & Storm aren't even in the top 5 of victims.
+
 
 ### 3. Data Processing
 
@@ -26,7 +28,6 @@ library(RCurl) # for loading external dataset (getBinaryURL)
 library(R.utils) # for bunzip2
 
 
-library(Hmisc) 
 library(plyr) # for count & aggregate method
 library(reshape2) # for melt 
 

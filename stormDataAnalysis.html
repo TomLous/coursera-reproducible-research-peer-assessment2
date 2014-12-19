@@ -54,7 +54,7 @@ if (window.hljs && document.readyState && document.readyState === "complete") {
 
 <div id="TOC">
 <ul>
-<li><a href="#analysis-of-impact-both-economic-as-humanitarian-of-different-weather-events-in-the-usa-based-on-the-noaa-storm-database">Analysis of impact, both economic as humanitarian, of different weather events in the USA based on the NOAA Storm Database</a><ul>
+<li><a href="#analysis-of-impact-both-economic-as-victims-of-different-weather-events-in-the-usa-based-on-the-noaa-storm-database">Analysis of impact, both economic as victims, of different weather events in the USA based on the NOAA Storm Database</a><ul>
 <li><a href="#reproducible-research-peer-assessment-2">Reproducible Research: Peer Assessment 2</a><ul>
 <li><a href="#assignment">1. Assignment</a></li>
 <li><a href="#synopsis">2. Synopsis</a></li>
@@ -65,9 +65,9 @@ if (window.hljs && document.readyState && document.readyState === "complete") {
 </ul>
 </div>
 
-<div id="analysis-of-impact-both-economic-as-humanitarian-of-different-weather-events-in-the-usa-based-on-the-noaa-storm-database" class="section level1">
-<h1>Analysis of impact, both economic as humanitarian, of different weather events in the USA based on the NOAA Storm Database</h1>
-<p>By Tom Lous (<a href="mailto:tomlous@gmail.com">tomlous@gmail.com</a>) Date: 18-12-2014</p>
+<div id="analysis-of-impact-both-economic-as-victims-of-different-weather-events-in-the-usa-based-on-the-noaa-storm-database" class="section level1">
+<h1>Analysis of impact, both economic as victims, of different weather events in the USA based on the NOAA Storm Database</h1>
+<p>By Tom Lous (<a href="mailto:tomlous@gmail.com">tomlous@gmail.com</a>) Date: 19-12-2014</p>
 <div id="reproducible-research-peer-assessment-2" class="section level2">
 <h2>Reproducible Research: Peer Assessment 2</h2>
 <div id="assignment" class="section level3">
@@ -77,7 +77,7 @@ if (window.hljs && document.readyState && document.readyState === "complete") {
 <div id="synopsis" class="section level3">
 <h3>2. Synopsis</h3>
 <p>The National Oceanic and Atmospheric Administration (NOAA) maintains a public database for storm event. The data contains the type of storm event, details like location, date, estimates for damage to property as well as the number of human victims of the storm. In this report we investigate which type of events are the most harmful to the population and financially.</p>
-<p>[conclusion]</p>
+<p>The conclusion is that the impact on humans, be it injuries or fatalities, isn’t directly correlated to the ecomomic damage weather events cause. Tornado’s are by far the highest cause for injuries (#1), and second in fatalities, whilst heat &amp; drought cause the most fatalities, but fourth in injuries. Both are in the top 5 of injuries &amp; fatalities next to Thunderstorms (resp #2 and #5), Flooding (#3 both) and Snow &amp; Ice (resp. #5 and #4). In economic damages, only the property damage really factors in the total damage, except for Heat &amp; Drought where more than 90% of damages is determined by crop damage. The #1 &amp; #2 of weather damage sources, resp. Flooding &amp; High Surf and Wind &amp; Storm cover more than 80% of all economic cost, while Wind &amp; Storm aren’t even in the top 5 of victims.</p>
 </div>
 <div id="data-processing" class="section level3">
 <h3>3. Data Processing</h3>
@@ -88,7 +88,6 @@ if (window.hljs && document.readyState && document.readyState === "complete") {
 library(R.utils) # for bunzip2
 
 
-library(Hmisc) 
 library(plyr) # for count &amp; aggregate method
 library(reshape2) # for melt 
 
